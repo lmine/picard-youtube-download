@@ -26,6 +26,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/115.0",
     "Accept": "application/json, text/plain, */*",
     "Content-Type": "application/json",
+    "Referer": "https://ytapi.cc/",
 }
 
 
@@ -106,7 +107,7 @@ def download_link(video_url: str, filename: str, max_retries: int = 10) -> bool:
     Returns:
         bool: True if the download and conversion were successful, False otherwise.
     """
-    print("Search for video.")
+    print(f"Search for video {video_url}.")
     tasks_response = search_video(video_url)
 
     task_id = create_conversion_task(tasks_response, bitrate=BITRATE_192)
@@ -151,9 +152,11 @@ def search_and_download(query: str, filename: str) -> Optional[bool]:
         return False
 
     first_result = search_results[0]
+    print("-------------")
     print(f"Title: {first_result['title']}")
     print(f"Album: {first_result['album']['name']}")
     print(f"https://music.youtube.com/watch?v={first_result['videoId']}")
+    print("-------------")
 
     video_id = first_result.get("videoId")
     if not video_id:
