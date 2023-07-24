@@ -152,16 +152,18 @@ def search_and_download(query: str, filename: str) -> Optional[bool]:
         return False
 
     first_result = search_results[0]
-    print("-------------")
-    print(f"Title: {first_result['title']}")
-    print(f"Album: {first_result['album']['name']}")
-    print(f"https://music.youtube.com/watch?v={first_result['videoId']}")
-    print("-------------")
 
     video_id = first_result.get("videoId")
     if not video_id:
         print("Video ID not found in the search results.")
         return None
+
+    print("-------------")
+    print(f"Title:   {first_result['title']}")
+    print(f"Album:   {first_result['album']['name']}")
+    print(f"Origin:  https://music.youtube.com/watch?v={first_result['videoId']}")
+    print(f"Save To: {filename}")
+    print("-------------")
 
     video_url = f"https://music.youtube.com/watch?v={video_id}"
     return download_link(video_url=video_url, filename=filename)
@@ -170,14 +172,9 @@ def search_and_download(query: str, filename: str) -> Optional[bool]:
 class DownloadSong(BaseAction):
     NAME = "Download songs..."
 
-    def download_track(self, artists: List[str], title: str, temp_dir: str) -> bool:
+    def download_track(self, artists: List[str], title: str, filename: str) -> bool:
         """Download a song and return True if successful, False otherwise."""
         query = f"{' '.join(artists)} {title}"
-        filename = os.path.join(temp_dir, f"{title}.mp3")
-
-        if os.path.exists(filename):
-            print(f"Skipping download for {title} - already downloaded.")
-            return True
 
         print(f"Downloading {title}...")
         success = search_and_download(query=query, filename=filename)
@@ -201,14 +198,11 @@ class DownloadSong(BaseAction):
             else:
                 continue
 
-            title = track.metadata.getall("title")
-            print(f"Artists: {artists}")
-            print(f"Title: {title}")
-
             if len(track.files) == 0:
-                self.download_track(artists, title, temp_dir)
-                if os.path.exists(os.path.join(temp_dir, f"{title}.mp3")):
-                    track.tagger.add_files([os.path.join(temp_dir, f"{title}.mp3")])
+                title = " ".join(track.metadata.getall("title"))
+                filename = os.path.join(temp_dir, f"{title}.mp3")
+                self.download_track(artists, title, filename)
+                track.tagger.add_files([filename])
 
     def callback(self, objs):
         """Process a list of albums and download missing songs."""
