@@ -130,65 +130,40 @@ def download_link(video_url: str, filename: str, max_retries: int = 10) -> bool:
     return download_mp3(download_url, filename)
 
 
-def search_and_download(query: str, filename: str) -> Optional[bool]:
-    """Search for a song using the YTMusic API and download it as an MP3 file.
-
-    Args:
-        query (str): The search query for the song.
-        filename (str): The name of the file to be saved.
-
-    Returns:
-        Optional[bool]: True if the download was successful, False if the song is not found, None if an error occurs.
-    """
-    try:
-        ytmusic = YTMusic()
-        search_results = ytmusic.search(query, filter="songs")
-    except Exception as e:
-        print("Error occurred during the search:", str(e))
-        return False
-
-    if not search_results:
-        print("Song not found.")
-        return False
-
-    first_result = search_results[0]
-
-    video_id = first_result.get("videoId")
-    if not video_id:
-        print("Video ID not found in the search results.")
-        return None
-
-    print("-------------")
-    print(f"Title:   {first_result['title']}")
-    print(f"Album:   {first_result['album']['name']}")
-    print(f"Origin:  https://music.youtube.com/watch?v={first_result['videoId']}")
-    print(f"Save To: {filename}")
-    print("-------------")
-
-    video_url = f"https://music.youtube.com/watch?v={video_id}"
-    return download_link(video_url=video_url, filename=filename)
-
-
 class DownloadSong(BaseAction):
     NAME = "Download songs..."
 
     def download_track(self, artists: List[str], title: str, filename: str) -> bool:
         """Download a song and return True if successful, False otherwise."""
         query = f"{' '.join(artists)} {title}"
+        try:
+            ytmusic = YTMusic()
+            search_results = ytmusic.search(query, filter="songs")
+        except Exception as e:
+            print("Error occurred during the search:", str(e))
+            return False
 
-        print(f"Downloading {title}...")
-        success = search_and_download(query=query, filename=filename)
-        if success:
-            print(f"Downloaded {title} successfully.")
-        else:
-            print(f"Failed to download {title}.")
-        return success
+        if not search_results:
+            print("Song not found.")
+            return False
+
+        first_result = search_results[0]
+
+        print("-------------")
+        print(f"Query:   {query}")
+        print("First result:")
+        print(f"Title:   {first_result['title']}")
+        print(f"Album:   {first_result['album']['name']}")
+        print(f"Origin:  https://music.youtube.com/watch?v={first_result['videoId']}")
+        print(f"Save To: {filename}")
+        print("-------------")
+
+        video_id = first_result.get("videoId")
+        video_url = f"https://music.youtube.com/watch?v={video_id}"
+        return download_link(video_url=video_url, filename=filename)
 
     def process_album(self, album: Album) -> None:
         """Process an album and download missing songs."""
-        if not isinstance(album, Album):
-            return
-
         temp_dir = tempfile.mkdtemp()
         for track in album.tracks:
             if "artists" in track.metadata:
@@ -201,8 +176,8 @@ class DownloadSong(BaseAction):
             if len(track.files) == 0:
                 title = " ".join(track.metadata.getall("title"))
                 filename = os.path.join(temp_dir, f"{title}.mp3")
-                self.download_track(artists, title, filename)
-                track.tagger.add_files([filename])
+                if self.download_track(artists, title, filename):
+                    track.tagger.add_files([filename])
 
     def callback(self, objs):
         """Process a list of albums and download missing songs."""
